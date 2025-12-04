@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { connect, getLocalStorage, openSignatureRequestPopup } from "@stacks/connect";
 
+type StacksNetwork = "mainnet" | "testnet";
+
 interface SignatureResult {
   message: string;
   signature: string;
   publicKey: string;
   address: string;
+  network: StacksNetwork;
 }
 
 interface VerificationResult {
@@ -16,6 +19,7 @@ interface VerificationResult {
 }
 
 export default function Home() {
+  const [network, setNetwork] = useState<StacksNetwork>("mainnet");
   const [message, setMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState("");
@@ -24,18 +28,38 @@ export default function Home() {
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  function isAddressForNetwork(addr: string, net: StacksNetwork): boolean {
+    if (net === "testnet") {
+      return addr.startsWith("ST") || addr.startsWith("SN");
+    }
+    return addr.startsWith("SP") || addr.startsWith("SM");
+  }
+
   async function connectWallet() {
     try {
       setError("");
-      await connect();
+      setResult(null);
+      setVerificationResult(null);
+
+      await connect({ network });
 
       const data = getLocalStorage();
       const stxAddresses = data?.addresses?.stx;
 
       if (stxAddresses && stxAddresses.length > 0) {
-        const addr = stxAddresses[0].address;
-        setAddress(addr);
-        setIsConnected(true);
+        // Find the address matching the selected network
+        const matchingAddress = stxAddresses.find((entry: { address: string }) =>
+          isAddressForNetwork(entry.address, network)
+        );
+
+        if (matchingAddress) {
+          setAddress(matchingAddress.address);
+          setIsConnected(true);
+        } else {
+          // Fallback to first address if no match found
+          setAddress(stxAddresses[0].address);
+          setIsConnected(true);
+        }
       }
     } catch (err) {
       setError(`Failed to connect: ${err instanceof Error ? err.message : String(err)}`);
@@ -52,12 +76,14 @@ export default function Home() {
 
     openSignatureRequestPopup({
       message: message,
+      network: network,
       onFinish: (data) => {
         setResult({
           message: message,
           signature: data.signature,
           publicKey: data.publicKey,
           address: address,
+          network: network,
         });
         setVerificationResult(null);
       },
@@ -79,6 +105,7 @@ export default function Home() {
         message: result.message,
         signature: result.signature,
         publicKey: result.publicKey,
+        network: result.network,
       });
 
       const response = await fetch(`/api/verify?${params}`);
@@ -112,17 +139,51 @@ export default function Home() {
 
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={connectWallet}
-              className="h-10 rounded-lg bg-orange-500 px-4 font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
-              disabled={isConnected}
-            >
-              {isConnected ? "Connected" : "Connect Wallet"}
-            </button>
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="network"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+              >
+                Network
+              </label>
+              <select
+                id="network"
+                value={network}
+                onChange={(e) => {
+                  setNetwork(e.target.value as StacksNetwork);
+                  setIsConnected(false);
+                  setAddress("");
+                  setResult(null);
+                  setVerificationResult(null);
+                }}
+                disabled={isConnected}
+                className="h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-black focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+              >
+                <option value="mainnet">Mainnet</option>
+                <option value="testnet">Testnet</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 invisible">
+                Action
+              </label>
+              <button
+                onClick={connectWallet}
+                className="h-10 rounded-lg bg-orange-500 px-4 font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+                disabled={isConnected}
+              >
+                {isConnected ? "Connected" : "Connect Wallet"}
+              </button>
+            </div>
             {isConnected && (
-              <span className="text-sm text-zinc-600 dark:text-zinc-400 font-mono">
-                {address.slice(0, 8)}...{address.slice(-8)}
-              </span>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Address
+                </span>
+                <span className="text-sm text-zinc-600 dark:text-zinc-400 font-mono h-10 flex items-center">
+                  {address.slice(0, 8)}...{address.slice(-8)}
+                </span>
+              </div>
             )}
           </div>
 

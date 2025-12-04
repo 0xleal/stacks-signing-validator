@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const message = searchParams.get("message");
   const signature = searchParams.get("signature");
   const publicKey = searchParams.get("publicKey");
+  const network = searchParams.get("network") as "mainnet" | "testnet" | null;
 
   if (!address || !message || !signature || !publicKey) {
     return NextResponse.json(
@@ -16,9 +17,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Determine the network from the parameter or infer from address prefix
+  const effectiveNetwork = network ?? (address.startsWith("ST") || address.startsWith("SN") ? "testnet" : "mainnet");
+
   try {
-    // Verify that the public key matches the claimed address
-    const derivedAddress = publicKeyToAddress(publicKey);
+    // Verify that the public key matches the claimed address using the correct network
+    const derivedAddress = publicKeyToAddress(publicKey, effectiveNetwork);
     if (derivedAddress !== address) {
       return NextResponse.json(
         { valid: false, message: "Public key does not match address" },

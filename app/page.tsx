@@ -213,7 +213,7 @@ export default function Home() {
               <button
                 onClick={verifyInBackend}
                 disabled={isVerifying}
-                className="h-10 rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200"
+                className="h-9 rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-200"
               >
                 {isVerifying ? "Verifying..." : "Verify in Backend"}
               </button>

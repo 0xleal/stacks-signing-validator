@@ -235,6 +235,17 @@ export default function Home() {
             )}
           </div>
         )}
+
+        <footer className="mt-auto pt-8 text-center text-sm text-zinc-500">
+          <a
+            href="https://github.com/0xleal/stacks-signing-validator"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+          >
+            Signature validation reference implementation
+          </a>
+        </footer>
       </main>
     </div>
   );
